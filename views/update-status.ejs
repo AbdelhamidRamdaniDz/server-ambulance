@@ -1,0 +1,40 @@
+<!-- File: views/update-status.ejs -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <title>تحديث حالة المستشفى</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>تحديث حالة المستشفى</h1>
+        <form action="/api/hospitals/status" method="POST" class="form">
+            <!-- ملاحظة: النموذج يرسل PUT، لكن HTML يدعم GET/POST فقط. سنستخدم middleware لاحقًا -->
+            <input type="hidden" name="_method" value="PUT">
+            
+            <div class="form-group">
+                <label>جاهزية قسم الطوارئ</label>
+                <select name="isERAvailable">
+                    <option value="true">متاح</option>
+                    <option value="false">غير متاح</option>
+                </select>
+            </div>
+            <fieldset>
+                <legend>عدد الأسرة المتاحة</legend>
+                <div class="form-group">
+                    <label for="icuTotal">العناية المركزة (ICU):</label>
+                    <input type="number" id="icuTotal" name="availableBeds[ICU][total]" placeholder="الإجمالي">
+                    <input type="number" name="availableBeds[ICU][occupied]" placeholder="المشغول">
+                </div>
+                 <div class="form-group">
+                    <label for="erTotal">الطوارئ:</label>
+                    <input type="number" id="erTotal" name="availableBeds[emergency][total]" placeholder="الإجمالي">
+                    <input type="number" name="availableBeds[emergency][occupied]" placeholder="المشغول">
+                </div>
+            </fieldset>
+            <button type="submit">تحديث الحالة</button>
+        </form>
+         <a href="/hospital-panel/dashboard" class="back-link">العودة</a>
+    </div>
+</body>
+</html>

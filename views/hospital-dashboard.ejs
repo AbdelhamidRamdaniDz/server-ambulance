@@ -1,0 +1,29 @@
+<!-- File: views/hospital-dashboard.ejs -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <title>لوحة تحكم المستشفى</title>
+    <link rel="stylesheet" href="/css/style.css"> <!-- سننشئ هذا الملف لاحقًا -->
+</head>
+<body>
+    <div class="container">
+        <h1>لوحة تحكم مستشفى <%= user.displayName %></h1>
+        <p>مرحباً بك في لوحة التحكم. من هنا يمكنك إدارة جميع عمليات المستشفى.</p>
+        
+        <div class="card-grid">
+            <a href="/hospital-panel/status" class="card">
+                <h3>تحديث الحالة</h3>
+                <p>تعديل جاهزية قسم الطوارئ وعدد الأسرة المتاحة.</p>
+            </a>
+            <a href="/hospital-panel/departments" class="card">
+                <h3>إدارة الأقسام</h3>
+                <p>إنشاء أقسام جديدة وإضافة الطواقم الطبية إليها.</p>
+            </a>
+            <a href="/hospital-panel/patient-log" class="card">
+                <h3>سجل المرضى</h3>
+                <p>عرض سجل جميع الحالات الطارئة التي تم استقبالها.</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
