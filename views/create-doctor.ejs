@@ -12,12 +12,14 @@
         .header h1 { font-size: 2.5rem; color: #343a40; }
         .card { background: #fff; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .card-title { font-size: 1.5rem; font-weight: 700; color: #4CAF50; border-bottom: 1px solid #e9ecef; padding-bottom: 15px; margin-bottom: 25px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; }
         input { width: 95%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; font-family: inherit; }
         button { padding: 12px 25px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
         .back-link { display: inline-block; margin-top: 20px; color: #007bff; text-decoration: none; font-weight: 600; }
         .error-message { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .success-message { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -28,21 +30,36 @@
 
         <div class="card">
             <h2 class="card-title">إضافة طبيب جديد</h2>
+            
             <% if (locals.error) { %>
                 <p class="error-message"><%= error %></p>
             <% } %>
+            <% if (locals.success) { %>
+                <p class="success-message">تم إنشاء حساب الطبيب بنجاح!</p>
+            <% } %>
+
             <form action="/api/hospitals/doctors" method="POST">
-                <div class="form-group">
-                    <label for="fullName">الاسم الكامل للطبيب</label>
-                    <input type="text" id="fullName" name="fullName" required>
-                </div>
-                <div class="form-group">
-                    <label for="specialty">التخصص</label>
-                    <input type="text" id="specialty" name="specialty" required>
-                </div>
-                <div class="form-group">
-                    <label for="nationalId">الرقم الوطني</label>
-                    <input type="text" id="nationalId" name="nationalId" required>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="fullName">الاسم الكامل للطبيب</label>
+                        <input type="text" id="fullName" name="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="specialty">التخصص</label>
+                        <input type="text" id="specialty" name="specialty" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nationalId">الرقم الوطني</label>
+                        <input type="text" id="nationalId" name="nationalId" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">البريد الإلكتروني</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">كلمة المرور</label>
+                        <input type="password" id="password" name="password" minlength="6" required>
+                    </div>
                 </div>
                 <button type="submit">إضافة الطبيب</button>
             </form>

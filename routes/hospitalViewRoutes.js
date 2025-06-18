@@ -24,13 +24,13 @@ router.get('/status', (req, res) => {
 router.get('/departments', async (req, res) => {
     try {
         const departments = await Department.find({ hospital: req.user.id });
-        res.render('manage-departments', { departments, error: req.query.error });
+        res.render('manage-departments', { departments, error: req.query.error, success: req.query.success });
     } catch (error) {
         res.status(500).send("Server Error");
     }
 });
 
-// عرض صفحة سجل المرضى
+// عرض سجل المرضى
 router.get('/patient-log', async (req, res) => {
     try {
         const patients = await Patient.find({ assignedHospital: req.user.id });
@@ -43,7 +43,8 @@ router.get('/patient-log', async (req, res) => {
 // عرض صفحة جدول المناوبات
 router.get('/schedule', async (req, res) => {
     try {
-        const departments = await Department.find({ hospital: req.user.id }).populate('staff.doctor', 'firstName lastName');
+        const departments = await Department.find({ hospital: req.user.id }).populate('staff.doctor', 'fullName');
+        
         const totalActiveStaff = departments.reduce((sum, dept) => sum + dept.activeStaffCount, 0);
         const totalStaff = departments.reduce((sum, dept) => sum + dept.staff.length, 0);
         const availabilityPercentage = totalStaff > 0 ? Math.round((totalActiveStaff / totalStaff) * 100) : 0;
@@ -52,6 +53,7 @@ router.get('/schedule', async (req, res) => {
             user: req.user,
             departments,
             totalActiveStaff,
+            totalStaff,
             availabilityPercentage
         });
     } catch (error) {
@@ -68,11 +70,15 @@ router.get('/create-doctor', (req, res) => {
     });
 });
 
-// عرض صفحة إضافة طاقم لقسم
+// @desc    Render the page to add staff to a department
+// @route   GET /hospital-panel/add-staff
 router.get('/add-staff', async (req, res) => {
     try {
+        // جلب الأقسام التابعة لهذا المستشفى
         const departments = await Department.find({ hospital: req.user.id });
-        const doctors = await Doctor.find({ hospital: req.user.id }); // Only doctors of this hospital
+        // جلب الأطباء التابعين لهذا المستشفى فقط
+        const doctors = await Doctor.find({ hospital: req.user.id });
+
         res.render('add-staff', {
             user: req.user,
             departments,

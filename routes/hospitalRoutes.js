@@ -5,7 +5,8 @@ const {
     updateHospitalStatus,
     getPatientLog,
     createDoctor,
-    getDepartments // Make sure to export this from your controller
+    getDepartments,
+    updateDepartment
 } = require('../controllers/hospitalController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -21,7 +22,10 @@ router.post('/doctors', createDoctor);
 // Routes for managing departments
 router.route('/departments')
     .post(createDepartment)
-    .get(getDepartments); // Added GET to fetch departments
+    .get(getDepartments);
+
+router.route('/departments/:id')
+    .put(updateDepartment); // Route to update a specific department
 
 router.route('/departments/:deptId/staff')
     .post(addStaffToDepartment);

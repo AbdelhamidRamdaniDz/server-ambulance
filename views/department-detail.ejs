@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة قسم - <%= department.name %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; }
+        .container { max-width: 960px; margin: 20px auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 2.5rem; color: #2c3e50; }
+        .header p { font-size: 1.1rem; color: #7f8c8d; }
+        .card { background: #fff; border-radius: 16px; padding: 30px; margin-bottom: 25px; box-shadow: 0 5px 25px rgba(0,0,0,0.07); }
+        .card-title { font-size: 1.6rem; font-weight: 700; color: #1976d2; border-bottom: 1px solid #e9ecef; padding-bottom: 15px; margin-bottom: 25px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 10px; font-weight: 600; }
+        input, select { width: 95%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 1rem; }
+        .switch-container { display: flex; align-items: center; justify-content: space-between; padding: 10px; background-color: #f8f9fa; border-radius: 8px; }
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #28a745; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        button { padding: 12px 30px; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        .staff-table { width: 100%; border-collapse: collapse; }
+        .staff-table th, .staff-table td { padding: 15px; text-align: right; border-bottom: 1px solid #e9ecef; }
+        .back-link { display: inline-block; margin-top: 20px; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>إدارة قسم: <%= department.name %></h1>
+            <p>تحديث جاهزية القسم، الأسرة، والطاقم الطبي المناوب.</p>
+        </div>
+
+        <form action="/api/hospitals/departments/<%= department._id %>" method="POST">
+             <input type="hidden" name="_method" value="PUT">
+
+            <!-- Card for Availability and Beds -->
+            <div class="card">
+                <h2 class="card-title">الحالة والأسرة</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>جاهزية القسم</label>
+                        <div class="switch-container">
+                            <span>غير متاح</span>
+                            <label class="switch">
+                                <input type="checkbox" name="isAvailable" value="true" <%= department.isAvailable ? 'checked' : '' %>>
+                                <span class="slider"></span>
+                            </label>
+                            <span>متاح</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="beds_total">إجمالي الأسرة</label>
+                        <input type="number" id="beds_total" name="beds[total]" value="<%= department.beds.total %>">
+                    </div>
+                     <div class="form-group">
+                        <label for="beds_occupied">الأسرة المشغولة</label>
+                        <input type="number" id="beds_occupied" name="beds[occupied]" value="<%= department.beds.occupied %>">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card for Staff Management -->
+            <div class="card">
+                <h2 class="card-title">الطاقم الطبي المناوب (<%= department.activeStaffCount %> / <%= department.staff.length %>)</h2>
+                <table class="staff-table">
+                    <thead>
+                        <tr>
+                            <th>اسم الطبيب</th>
+                            <th>الدور في القسم</th>
+                            <th>حالة التوفر</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% department.staff.forEach((member, index) => { %>
+                        <tr>
+                            <td><%= member.doctor.fullName %></td>
+                            <td><%= member.roleInDepartment %></td>
+                            <td>
+                                <select name="staff[<%= index %>][onDuty]">
+                                    <option value="true" <%= member.onDuty ? 'selected' : '' %>>مناوب</option>
+                                    <option value="false" <%= !member.onDuty ? 'selected' : '' %>>خارج الخدمة</option>
+                                </select>
+                                <input type="hidden" name="staff[<%= index %>][staffId]" value="<%= member._id %>">
+                            </td>
+                        </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="submit">حفظ التغييرات</button>
+        </form>
+        
+        <a href="/hospital-panel/departments" class="back-link">العودة لإدارة الأقسام</a>
+    </div>
+</body>
+</html>

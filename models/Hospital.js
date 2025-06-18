@@ -35,6 +35,7 @@ const HospitalSchema = new mongoose.Schema({
   specialties: [String]
 }, { timestamps: true });
 
+// تشفير كلمة المرور قبل الحفظ
 HospitalSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     next();
@@ -43,12 +44,14 @@ HospitalSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+// إنشاء توكن JWT
 HospitalSchema.methods.getSignedJwtToken = function() {
   return jwt.sign({ id: this._id, role: 'hospital' }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE
   });
 };
 
+// التحقق من كلمة المرور
 HospitalSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
