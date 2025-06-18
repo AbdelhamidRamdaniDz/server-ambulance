@@ -3,6 +3,30 @@ const HospitalStatus = require('../models/HospitalStatus');
 const Patient = require('../models/Patient');
 const Doctor = require('../models/Doctor');
 
+// @desc    Create a new Doctor associated with the logged-in hospital
+// @route   POST /api/hospitals/doctors
+exports.createDoctor = async (req, res) => {
+    try {
+        const { fullName, specialty, nationalId } = req.body;
+        
+        // Associate the new doctor with the currently logged-in hospital
+        const doctorData = {
+            fullName,
+            specialty,
+            nationalId,
+            hospital: req.user.id // req.user is populated by 'protect' middleware
+        };
+
+        await Doctor.create(doctorData);
+        
+        // Redirect to a confirmation page or the same page with a success message
+        res.redirect('/hospital-panel/create-doctor?success=true');
+
+    } catch (error) {
+        res.redirect(`/hospital-panel/create-doctor?error=${encodeURIComponent(error.message)}`);
+    }
+};
+
 // @desc    Get all departments for the logged-in hospital
 // @route   GET /api/hospitals/departments
 exports.getDepartments = async (req, res) => {
@@ -19,10 +43,10 @@ exports.getDepartments = async (req, res) => {
 exports.createDepartment = async (req, res) => {
     try {
         req.body.hospital = req.user.id;
-        const department = await Department.create(req.body);
-        res.status(201).json({ success: true, data: department });
+        await Department.create(req.body);
+        res.redirect('/hospital-panel/departments');
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+        res.redirect(`/hospital-panel/departments?error=${encodeURIComponent(error.message)}`);
     }
 };
 
@@ -39,9 +63,9 @@ exports.addStaffToDepartment = async (req, res) => {
         
         department.staff.push({ doctor: doctorId, roleInDepartment });
         await department.save();
-        res.status(200).json({ success: true, data: department });
+        res.redirect('/hospital-panel/departments');
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+        res.redirect(`/hospital-panel/departments?error=${encodeURIComponent(error.message)}`);
     }
 };
 
@@ -59,9 +83,9 @@ exports.updateHospitalStatus = async (req, res) => {
                 new: true, runValidators: true
             });
         }
-        res.status(200).json({ success: true, data: status });
+        res.redirect('/hospital-panel/status');
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+         res.redirect(`/hospital-panel/status?error=${encodeURIComponent(error.message)}`);
     }
 };
 

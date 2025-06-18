@@ -1,47 +1,55 @@
 const Doctor = require('../models/Doctor');
 const Hospital = require('../models/Hospital');
-const SuperAdmin = require('../models/SuperAdmin'); 
+const SuperAdmin = require('../models/SuperAdmin');
 const jwt = require('jsonwebtoken');
 
-// @desc    Login for Super Admin ONLY
+// @desc    Login for any role
 // @route   POST /api/auth/login
-// @access  Public
-exports.login = async (req, res, next) => {
+exports.login = async (req, res) => {
+    const { email, password, role } = req.body;
+    if (!email || !password || !role) {
+        return res.status(400).send('<h1>Error</h1><p>Please provide all fields</p><a href="/login">Go Back</a>');
+    }
+
+    let Model;
+    if (role === 'doctor') Model = Doctor;
+    else if (role === 'hospital') Model = Hospital;
+    else if (role === 'super-admin') Model = SuperAdmin;
+    else return res.status(400).send('<h1>Error</h1><p>Invalid Role</p><a href="/login">Go Back</a>');
+
     try {
-        const { email, password, role } = req.body;
-
-        if (!email || !password || !role) {
-            return res.status(400).json({ success: false, error: 'Please provide email, password, and role' });
-        }
-
-        if (role !== 'super-admin') {
-            return res.status(403).json({ success: false, error: 'Login is restricted to Super Admins only.' });
-        }
-
-        const user = await SuperAdmin.findOne({ email }).select('+password');
-
+        const user = await Model.findOne({ email }).select('+password');
         if (!user || !(await user.matchPassword(password))) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
+            return res.status(401).send('<h1>Error</h1><p>Invalid Credentials</p><a href="/login">Go Back</a>');
         }
-        
         sendTokenResponse(user, role, 200, res);
-
     } catch (error) {
-        res.status(500).json({ success: false, error: "Server Error" });
+        res.status(500).send('<h1>Server Error</h1>');
     }
 };
 
+// Helper function to set cookie and redirect
 const sendTokenResponse = (user, role, statusCode, res) => {
-  const token = user.getSignedJwtToken(); 
+  const token = user.getSignedJwtToken();
 
-  user.password = undefined;
-  if(role === 'super-admin') {
-      return res.redirect(`/admin/dashboard`);
+  const options = {
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    httpOnly: true // Secure against client-side script access
+  };
+
+  if (process.env.NODE_ENV === 'production') {
+    options.secure = true; // Only send over HTTPS in production
   }
   
-  return res.status(statusCode).json({
-    success: true,
-    token,
-    user 
-  });
+  // Set the cookie and then redirect to the appropriate dashboard
+  res.status(statusCode).cookie('token', token, options);
+  
+  if (role === 'super-admin') {
+      return res.redirect('/admin/dashboard');
+  }
+   if (role === 'hospital') {
+      return res.redirect('/hospital-panel/dashboard');
+  }
+  // Fallback for other roles (e.g., if a doctor logs in via a non-browser client)
+   res.json({ success: true, token });
 };

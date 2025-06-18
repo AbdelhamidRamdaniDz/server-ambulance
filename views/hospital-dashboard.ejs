@@ -1,29 +1,146 @@
-<!-- File: views/hospital-dashboard.ejs -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <title>لوحة تحكم المستشفى</title>
-    <link rel="stylesheet" href="/css/style.css"> <!-- سننشئ هذا الملف لاحقًا -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            font-family: 'Cairo', Arial, sans-serif;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .dashboard-header {
+            background: #1976d2;
+            color: #fff;
+            padding: 2rem 0 1.5rem 0;
+            border-radius: 0 0 32px 32px;
+            box-shadow: 0 4px 24px rgba(25, 118, 210, 0.08);
+            text-align: center;
+            position: relative;
+        }
+        .dashboard-header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+        .dashboard-header p {
+            margin: 0;
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 2.5rem auto 0 auto;
+            max-width: 1200px;
+            padding: 0 1.5rem;
+        }
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 2rem 1.5rem;
+            text-decoration: none;
+            color: #222;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .card:hover, .card:focus {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 30px rgba(25, 118, 210, 0.2);
+        }
+        .card .icon {
+            font-size: 3rem;
+            color: #1976d2;
+            margin-bottom: 1rem;
+        }
+        .card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+        .card p {
+            margin: 0;
+            font-size: 1rem;
+            color: #555;
+            line-height: 1.5;
+        }
+        .logout-btn {
+            position: absolute;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logout-btn:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>لوحة تحكم مستشفى <%= user.displayName %></h1>
-        <p>مرحباً بك في لوحة التحكم. من هنا يمكنك إدارة جميع عمليات المستشفى.</p>
-        
+    <header class="dashboard-header">
+        <form action="/api/auth/logout" method="POST" style="display:inline;">
+            <button type="submit" class="logout-btn" title="تسجيل الخروج">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </form>
+        <h1>لوحة تحكم مستشفى <%= user.displayName || user.name %></h1>
+        <p>مرحباً بك في لوحة التحكم. يمكنك إدارة عمليات المستشفى بكفاءة وسهولة.</p>
+    </header>
+    <main>
         <div class="card-grid">
             <a href="/hospital-panel/status" class="card">
+                <span class="icon"><i class="fas fa-hospital-user"></i></span>
                 <h3>تحديث الحالة</h3>
                 <p>تعديل جاهزية قسم الطوارئ وعدد الأسرة المتاحة.</p>
             </a>
             <a href="/hospital-panel/departments" class="card">
+                <span class="icon"><i class="fas fa-network-wired"></i></span>
                 <h3>إدارة الأقسام</h3>
-                <p>إنشاء أقسام جديدة وإضافة الطواقم الطبية إليها.</p>
+                <p>إنشاء أقسام جديدة وتوزيع الطواقم الطبية.</p>
+            </a>
+            <a href="/hospital-panel/add-staff" class="card">
+                <span class="icon"><i class="fas fa-user-plus"></i></span>
+                <h3>إضافة طاقم للقسم</h3>
+                <p>توزيع الأطباء على الأقسام وتحديد أدوارهم.</p>
+            </a>
+            <!-- --- تمت إضافة هذه البطاقة --- -->
+            <a href="/hospital-panel/create-doctor" class="card">
+                <span class="icon"><i class="fas fa-user-doctor"></i></span>
+                <h3>إدارة الأطباء</h3>
+                <p>إنشاء حسابات جديدة لأطباء المستشفى.</p>
+            </a>
+            <a href="/hospital-panel/schedule" class="card">
+                <span class="icon"><i class="fas fa-calendar-alt"></i></span>
+                <h3>جدول المناوبات</h3>
+                <p>عرض الطواقم الطبية المناوبة في جميع الأقسام.</p>
             </a>
             <a href="/hospital-panel/patient-log" class="card">
+                <span class="icon"><i class="fas fa-notes-medical"></i></span>
                 <h3>سجل المرضى</h3>
                 <p>عرض سجل جميع الحالات الطارئة التي تم استقبالها.</p>
             </a>
         </div>
-    </div>
+    </main>
 </body>
 </html>

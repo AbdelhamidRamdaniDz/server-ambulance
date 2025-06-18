@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const SuperAdminSchema = new mongoose.Schema({
+const ParamedicSchema = new mongoose.Schema({
+  fullName: { type: String, required: true },
   email: {
     type: String,
     required: [true, 'Please add an email'],
@@ -15,29 +16,31 @@ const SuperAdminSchema = new mongoose.Schema({
     minlength: 6,
     select: false 
   },
+  nationalId: { type: String, unique: true, required: true },
+  assignedAmbulance: { type: String },
   role: {
-    type: String,
-    default: 'super-admin'
+      type: String,
+      default: 'paramedic'
   }
 }, { timestamps: true });
 
 // تشفير كلمة المرور قبل الحفظ
-SuperAdminSchema.pre('save', async function(next) {
+ParamedicSchema.pre('save', async function(next) {
   if (!this.isModified('password')) { next(); }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
 // إنشاء توكن JWT
-SuperAdminSchema.methods.getSignedJwtToken = function() {
-  return jwt.sign({ id: this._id, role: 'super-admin' }, process.env.JWT_SECRET, {
+ParamedicSchema.methods.getSignedJwtToken = function() {
+  return jwt.sign({ id: this._id, role: 'paramedic' }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE
   });
 };
 
 // التحقق من كلمة المرور
-SuperAdminSchema.methods.matchPassword = async function(enteredPassword) {
+ParamedicSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model('SuperAdmin', SuperAdminSchema);
+module.exports = mongoose.model('Paramedic', ParamedicSchema);
