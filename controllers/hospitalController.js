@@ -7,23 +7,18 @@ const Doctor = require('../models/Doctor');
 // @route   POST /api/hospitals/doctors
 exports.createDoctor = async (req, res) => {
     try {
-        const { fullName, specialty, nationalId, email, password } = req.body;
+        const { fullName, specialty, nationalCode, phone } = req.body;
         
-        // Associate the new doctor with the currently logged-in hospital
         const doctorData = {
             fullName,
             specialty,
-            // --- FIX IS HERE ---
-            // The field name in the model is 'nationalId'.
-            nationalId: nationalId, 
-            email,
-            password,
-            hospital: req.user.id // req.user is populated by the 'protect' middleware
+            nationalCode,
+            phone,
+            hospital: req.user.id
         };
 
         await Doctor.create(doctorData);
         
-        // Redirect to a confirmation page or the same page with a success message
         res.redirect('/hospital-panel/create-doctor?success=true');
 
     } catch (error) {
@@ -142,5 +137,47 @@ exports.getPatientLog = async (req, res) => {
         res.status(200).json({ success: true, count: patients.length, data: patients });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Server Error' });
+    }
+};
+
+
+// @desc    Remove a staff member from a department
+// @route   DELETE /api/hospitals/departments/:deptId/staff/:staffId
+exports.removeStaffFromDepartment = async (req, res) => {
+    try {
+        const department = await Department.findById(req.params.deptId);
+
+        if (!department || department.hospital.toString() !== req.user.id) {
+            return res.status(404).send('Department not found or not authorized');
+        }
+
+        department.staff.pull({ _id: req.params.staffId });
+        
+        await department.save();
+
+        res.redirect(`/hospital-panel/departments/${req.params.deptId}`);
+    } catch (error) {
+        res.redirect(`/hospital-panel/departments/${req.params.deptId}?error=${encodeURIComponent(error.message)}`);
+    }
+};
+
+// @desc    Remove a staff member from a department
+// @route   DELETE /api/hospitals/departments/:deptId/staff/:staffId
+exports.removeStaffFromDepartment = async (req, res) => {
+    try {
+        const department = await Department.findById(req.params.deptId);
+
+        if (!department || department.hospital.toString() !== req.user.id) {
+            return res.status(404).send('Department not found or not authorized');
+        }
+
+        // إيجاد وحذف الموظف من مصفوفة الطاقم
+        department.staff.pull({ _id: req.params.staffId });
+        
+        await department.save();
+
+        res.redirect(`/hospital-panel/departments/${req.params.deptId}`);
+    } catch (error) {
+        res.redirect(`/hospital-panel/departments/${req.params.deptId}?error=${encodeURIComponent(error.message)}`);
     }
 };

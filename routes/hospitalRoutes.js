@@ -1,40 +1,45 @@
 const express = require('express');
 const {
     createDepartment,
+    getDepartments,
+    updateDepartment,
     addStaffToDepartment,
+    removeStaffFromDepartment,
     updateHospitalStatus,
     getPatientLog,
-    createDoctor,
-    getDepartments,
-    updateDepartment
+    createDoctor
 } = require('../controllers/hospitalController');
 
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Apply protection and authorization to all routes in this file
+// تطبيق الحماية والصلاحيات على جميع المسارات في هذا الملف
 router.use(protect, authorize('hospital'));
 
-// Route for creating a new doctor
+// مسار لإنشاء طبيب جديد
 router.post('/doctors', createDoctor);
 
-// Routes for managing departments
+// مسارات لإدارة الأقسام
 router.route('/departments')
     .post(createDepartment)
     .get(getDepartments);
 
 router.route('/departments/:id')
-    .put(updateDepartment); // Route to update a specific department
+    .put(updateDepartment);
 
+// مسارات لإدارة الطاقم الطبي في قسم معين
 router.route('/departments/:deptId/staff')
     .post(addStaffToDepartment);
 
-// Route for managing hospital status (beds, ER)
+router.route('/departments/:deptId/staff/:staffId')
+    .delete(removeStaffFromDepartment); // مسار الحذف الصحيح
+
+// مسار لإدارة حالة المستشفى (الأسرة، الطوارئ)
 router.route('/status')
     .put(updateHospitalStatus);
 
-// Route for viewing patient history
+// مسار لعرض سجل المرضى
 router.route('/patient-log')
     .get(getPatientLog);
 

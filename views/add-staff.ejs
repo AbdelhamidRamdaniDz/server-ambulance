@@ -49,7 +49,7 @@
                     <select id="doctorId" name="doctorId" required>
                          <option value="">-- يرجى اختيار طبيب --</option>
                         <% doctors.forEach(doc => { %>
-                            <option value="<%= doc._id %>"><%= doc.firstName %> <%= doc.lastName %></option>
+                            <option value="<%= doc._id %>"><%= doc.fullName %></option>
                         <% }); %>
                     </select>
                 </div>

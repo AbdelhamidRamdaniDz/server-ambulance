@@ -28,20 +28,18 @@ exports.login = async (req, res) => {
     }
 };
 
-// Helper function to set cookie and redirect
 const sendTokenResponse = (user, role, statusCode, res) => {
   const token = user.getSignedJwtToken();
 
   const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true // Secure against client-side script access
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
+    httpOnly: true 
   };
 
   if (process.env.NODE_ENV === 'production') {
-    options.secure = true; // Only send over HTTPS in production
+    options.secure = true;
   }
   
-  // Set the cookie and then redirect to the appropriate dashboard
   res.status(statusCode).cookie('token', token, options);
   
   if (role === 'super-admin') {
@@ -50,6 +48,5 @@ const sendTokenResponse = (user, role, statusCode, res) => {
    if (role === 'hospital') {
       return res.redirect('/hospital-panel/dashboard');
   }
-  // Fallback for other roles (e.g., if a doctor logs in via a non-browser client)
    res.json({ success: true, token });
 };

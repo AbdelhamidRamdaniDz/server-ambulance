@@ -1,20 +1,15 @@
 const express = require('express');
-// Import the entire controller object instead of destructuring
-const adminController = require('../controllers/adminController');
+const { createUser, getUsers } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-// router.use(protect);
-// router.use(authorize('super-admin'));
+// يمكنك تفعيل هذه الأسطر لاحقًا لحماية جميع المسارات
+// router.use(protect, authorize('super-admin'));
 
-
+// مسار موحد لإنشاء وعرض المستخدمين
 router.route('/users')
-    .post(adminController.createUser)
-    .get(adminController.getUsers);
-
-// router.route('/users/:id')
-//     .put(adminController.updateUser)
-//     .delete(adminController.deleteUser);
+    .post(createUser)
+    .get(getUsers);
 
 module.exports = router;

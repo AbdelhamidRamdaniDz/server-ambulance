@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة أطباء المستشفى</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; }
         .container { max-width: 800px; margin: 20px auto; }
@@ -20,23 +21,39 @@
         .back-link { display: inline-block; margin-top: 20px; color: #007bff; text-decoration: none; font-weight: 600; }
         .error-message { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .success-message { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        
+        /* --- New Doctor List Styles --- */
+        .doctor-list { display: flex; flex-direction: column; gap: 15px; }
+        .doctor-card { display: flex; align-items: center; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #e9ecef; }
+        .doctor-avatar { width: 50px; height: 50px; border-radius: 25px; display: flex; align-items: center; justify-content: center; margin-left: 15px; }
+        .avatar-text { color: white; font-size: 1.2rem; font-weight: 700; }
+        .doctor-info { flex-grow: 1; }
+        .doctor-name { font-size: 1.1rem; font-weight: 600; color: #343a40; }
+        .doctor-specialty { font-size: 0.9rem; color: #6c757d; }
+        .doctor-actions { display: flex; gap: 10px; }
+        .action-btn { padding: 8px; border-radius: 5px; }
+        .edit-btn { background-color: #e3f2fd; }
+        .delete-btn { background-color: #ffeb-ee; }
     </style>
 </head>
 <body>
+    <% 
+        const getAvatarColor = (name) => {
+            const colors = ['#3498db', '#e74c3c', '#9b59b6', '#2ecc71', '#f1c40f'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash % colors.length)];
+        };
+    %>
     <div class="container">
-        <div class="header">
-            <h1>إدارة أطباء المستشفى</h1>
-        </div>
-
+        <div class="header"><h1>إدارة أطباء المستشفى</h1></div>
         <div class="card">
             <h2 class="card-title">إضافة طبيب جديد</h2>
             
-            <% if (locals.error) { %>
-                <p class="error-message"><%= error %></p>
-            <% } %>
-            <% if (locals.success) { %>
-                <p class="success-message">تم إنشاء حساب الطبيب بنجاح!</p>
-            <% } %>
+            <% if (locals.error) { %><p class="error-message"><%= error %></p><% } %>
+            <% if (locals.success) { %><p class="success-message">تم إنشاء حساب الطبيب بنجاح!</p><% } %>
 
             <form action="/api/hospitals/doctors" method="POST">
                 <div class="form-grid">
@@ -49,20 +66,41 @@
                         <input type="text" id="specialty" name="specialty" required>
                     </div>
                     <div class="form-group">
-                        <label for="nationalId">الرقم الوطني</label>
-                        <input type="text" id="nationalId" name="nationalId" required>
+                        <label for="nationalCode">الرقم الوطني</label>
+                        <input type="text" id="nationalCode" name="nationalCode" required>
                     </div>
-                    <div class="form-group">
-                        <label for="email">البريد الإلكتروني</label>
-                        <input type="email" id="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">كلمة المرور</label>
-                        <input type="password" id="password" name="password" minlength="6" required>
+                     <div class="form-group">
+                        <label for="phone">رقم الهاتف</label>
+                        <input type="text" id="phone" name="phone">
                     </div>
                 </div>
                 <button type="submit">إضافة الطبيب</button>
             </form>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">الأطباء الحاليون</h2>
+            <% if (typeof doctors !== 'undefined' && doctors.length > 0) { %>
+                <div class="doctor-list">
+                    <% doctors.forEach(doc => { %>
+                        <div class="doctor-card">
+                            <div class="doctor-avatar" style="background-color: <%= getAvatarColor(doc.fullName) %>;">
+                                <span class="avatar-text"><%= doc.fullName.split(' ').map(n=>n[0]).slice(0,2).join('') %></span>
+                            </div>
+                            <div class="doctor-info">
+                                <div class="doctor-name"><%= doc.fullName %></div>
+                                <div class="doctor-specialty"><%= doc.specialty %></div>
+                            </div>
+                            <div class="doctor-actions">
+                                <button type="button" class="action-btn edit-btn" title="تعديل"><i class="fas fa-pencil-alt" style="color: #1976d2;"></i></button>
+                                <button type="button" class="action-btn delete-btn" title="حذف"><i class="fas fa-trash-alt" style="color: #d32f2f;"></i></button>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <p>لا يوجد أطباء مسجلون في هذا المستشفى حاليًا.</p>
+            <% } %>
         </div>
 
         <a href="/hospital-panel/dashboard" class="back-link">العودة إلى لوحة التحكم</a>

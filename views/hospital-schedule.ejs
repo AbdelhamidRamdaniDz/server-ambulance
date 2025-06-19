@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول المناوبات - <%= user.name %></title>
+    <title>جدول المناوبات - <%= user.displayName %></title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
@@ -68,6 +68,7 @@
         }
         .stat-text-container { 
             text-align: right; 
+            flex: 1;
         }
         .stat-number { 
             font-size: 2rem; 
@@ -88,7 +89,7 @@
             border-radius: var(--radius); 
             box-shadow: var(--card-shadow); 
             overflow: hidden; 
-            border-left: 5px solid #ccc; /* fallback, will be overridden inline */
+            border-right: 5px solid; 
         }
         .card-header { 
             padding: 20px; 
@@ -116,42 +117,64 @@
             font-weight: 700; 
             color: var(--text-color); 
         }
-        .staff-count { 
-            font-size: 1rem; 
-            font-weight: 600; 
-            color: var(--text-secondary); 
+        .availability-badge {
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
         }
         .progress-container { 
             padding: 0 20px 20px; 
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
         }
         .progress-bar { 
             height: 8px; 
             background-color: var(--border-color); 
             border-radius: 4px; 
             overflow: hidden; 
-            margin-top: 10px; 
         }
         .progress-fill { 
             height: 100%; 
             border-radius: 4px; 
         }
         .staff-container { 
-            padding: 0 20px 20px; 
+            padding: 10px 20px 20px; 
+            border-top: 1px solid var(--border-color);
+            margin-top: 20px;
+        }
+         .staff-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 15px;
         }
         .staff-item { 
             display: flex; 
-            justify-content: space-between; 
             align-items: center; 
-            padding: 15px 0; 
-            border-bottom: 1px solid var(--border-color); 
+            margin-bottom: 12px;
         }
-        .staff-item:last-child { 
-            border-bottom: none; 
+        .staff-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 12px;
+        }
+        .staff-avatar i {
+            color: white;
+            font-size: 18px;
         }
         .staff-details { 
             text-align: right; 
             flex: 1; 
-            margin-right: 15px; 
         }
         .staff-name { 
             font-size: 1.1rem; 
@@ -162,23 +185,30 @@
             font-size: 0.9rem; 
             color: var(--text-secondary); 
         }
-        .status-badge { 
-            display: flex; 
-            align-items: center; 
-            padding: 6px 12px; 
-            border-radius: 20px; 
-            font-size: 0.9em; 
-            font-weight: 600; 
+        .card-actions {
+            background-color: var(--light-bg);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            border-top: 1px solid var(--border-color);
         }
-        .status-dot { 
-            width: 8px; 
-            height: 8px; 
-            border-radius: 50%; 
-            margin-left: 8px; 
+        .action-btn {
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
         }
+        .details-btn { background-color: var(--primary-color); color: white; }
+        .edit-btn { background-color: var(--card-bg); color: var(--text-secondary); border-color: var(--border-color); }
         .back-link { 
-            display: inline-block; 
-            margin-top: 30px; 
+            display: block; 
+            margin-top: 30px;
+            text-align: center;
             color: var(--primary-color); 
             text-decoration: none; 
             font-weight: 700; 
@@ -192,36 +222,6 @@
     </style>
 </head>
 <body>
-    <%
-        const getStatusColor = (status) => {
-            switch (status) {
-                case 'available': return '#28a745';
-                case 'limited': return '#ff9800';
-                case 'unavailable': return '#f44336';
-                default: return '#6c757d';
-            }
-        };
-        const getStatusText = (status) => {
-            switch (status) {
-                case 'available': return 'متاح';
-                case 'limited': return 'محدود';
-                case 'unavailable': return 'غير متاح';
-                default: return 'غير محدد';
-            }
-        };
-        // Helper to add alpha to hex color (for status badge background)
-        function hexToRgba(hex, alpha) {
-            hex = hex.replace('#', '');
-            if (hex.length === 3) {
-                hex = hex.split('').map(x => x + x).join('');
-            }
-            const num = parseInt(hex, 16);
-            const r = (num >> 16) & 255;
-            const g = (num >> 8) & 255;
-            const b = num & 255;
-            return `rgba(${r},${g},${b},${alpha})`;
-        }
-    %>
     <div class="container">
         <div class="header">
             <h1>جدول المناوبات</h1>
@@ -250,37 +250,48 @@
             <% if (departments.length > 0) { %>
                 <% departments.forEach(dept => { %>
                     <% const availability = (dept.activeStaffCount / dept.staff.length) * 100 || 0; %>
-                    <div class="department-card" style="border-left: 5px solid <%= dept.color || '#ccc' %>;">
+                    <% const onDutyStaff = dept.staff.filter(s => s.onDuty); %>
+                    <div class="department-card" style="border-right-color: <%= dept.isAvailable ? 'var(--success-color)' : 'var(--danger-color)' %>;">
                         <div class="card-header">
-                            <span class="staff-count"><%= dept.activeStaffCount %> / <%= dept.staff.length %> نشط</span>
+                            <span class="availability-badge" style="background-color: <%= dept.isAvailable ? 'var(--success-color)' : 'var(--danger-color)' %>20; color: <%= dept.isAvailable ? 'var(--success-color)' : 'var(--danger-color)' %>;">
+                                <%= dept.isAvailable ? 'القسم متاح' : 'القسم مغلق' %>
+                            </span>
                             <div class="header-right">
-                                <span class="department-icon" style="background-color: <%= dept.color || '#ccc' %>;"><i class="fas fa-<%= dept.icon %>"></i></span>
                                 <h2 class="department-title"><%= dept.name %></h2>
+                                <span class="department-icon" style="background-color: <%= dept.color || '#ccc' %>;"><i class="fas fa-<%= dept.icon %>"></i></span>
                             </div>
                         </div>
                         <div class="progress-container">
+                             <div class="progress-label">
+                                <span>توفر الطاقم</span>
+                                <span><%= dept.activeStaffCount %> / <%= dept.staff.length %></span>
+                             </div>
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: <%= availability %>%; background-color: <%= dept.color || '#ccc' %>;"></div>
                             </div>
                         </div>
                         <div class="staff-container">
-                            <% dept.staff.forEach(member => { %>
-                                <div class="staff-item">
-                                    <%
-                                        // Use RGBA for background with alpha for badge
-                                        const badgeBg = hexToRgba(getStatusColor(member.status), 0.12);
-                                        const badgeColor = getStatusColor(member.status);
-                                    %>
-                                    <div class="status-badge" style="background-color: <%= badgeBg %>; color: <%= badgeColor %>;">
-                                        <span class="status-dot" style="background-color: <%= badgeColor %>;"></span>
-                                        <%= getStatusText(member.status) %>
+                            <h3 class="staff-title">الطاقم المناوب حاليًا</h3>
+                             <% if(onDutyStaff.length > 0) { %>
+                                <% onDutyStaff.forEach(member => { %>
+                                    <div class="staff-item">
+                                        <div class="staff-details">
+                                            <div class="staff-name"><%= member.doctor.fullName %></div>
+                                            <div class="staff-role"><%= member.roleInDepartment %></div>
+                                        </div>
+                                        <div class="staff-avatar" style="background-color: var(--success-color);">
+                                            <i class="fas fa-user-md"></i>
+                                        </div>
                                     </div>
-                                    <div class="staff-details">
-                                        <div class="staff-name"><%= member.doctor.firstName %> <%= member.doctor.lastName %></div>
-                                        <div class="staff-role"><%= member.roleInDepartment %></div>
-                                    </div>
-                                </div>
-                            <% }); %>
+                                <% }); %>
+                            <% } else { %>
+                                <p class="no-data" style="font-size: 1rem; padding: 10px 0;">لا يوجد طاقم مناوب حاليًا.</p>
+                            <% } %>
+                        </div>
+                        <!-- --- تمت إضافة هذا الجزء --- -->
+                        <div class="card-actions">
+                            <a href="/hospital-panel/departments/<%= dept._id %>" class="action-btn details-btn"><i class="fas fa-eye"></i> عرض التفاصيل</a>
+                            <a href="#" class="action-btn edit-btn"><i class="fas fa-edit"></i> تعديل</a>
                         </div>
                     </div>
                 <% }); %>
@@ -290,7 +301,7 @@
         </div>
 
          <a href="/hospital-panel/dashboard" class="back-link">
-            <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
+            <i class="fas fa-arrow-left" style="margin-right: 8px;"></i>
             العودة إلى لوحة التحكم
         </a>
     </div>
