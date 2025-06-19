@@ -91,19 +91,37 @@ exports.updateDepartment = async (req, res) => {
 // @desc    Add a doctor to a department's staff
 // @route   POST /api/hospitals/departments/:deptId/staff
 exports.addStaffToDepartment = async (req, res) => {
+    const { deptId } = req.params;
+    const { doctorId, roleInDepartment } = req.body;
+
     try {
-        const { doctorId, roleInDepartment } = req.body;
-        const department = await Department.findById(req.params.deptId);
+        const department = await Department.findById(deptId);
 
         if (!department || department.hospital.toString() !== req.user.id) {
             return res.status(404).json({ success: false, error: 'Department not found or not authorized' });
         }
         
-        department.staff.push({ doctor: doctorId, roleInDepartment });
+        const isAlreadyStaff = department.staff.some(member => member.doctor.toString() === doctorId);
+        if (isAlreadyStaff) {
+            const errorMessage = 'هذا الطبيب مضاف بالفعل إلى هذا القسم.';
+            return res.redirect(`/hospital-panel/add-staff?error=${encodeURIComponent(errorMessage)}`);
+        }
+
+        if (roleInDepartment === 'رئيس قسم') {
+            const hasHeadOfDepartment = department.staff.some(member => member.roleInDepartment === 'رئيس قسم');
+            if (hasHeadOfDepartment) {
+                const errorMessage = 'لا يمكن تعيين أكثر من رئيس قسم واحد.';
+                return res.redirect(`/hospital-panel/add-staff?error=${encodeURIComponent(errorMessage)}`);
+            }
+        }
+
+        department.staff.push({ doctor: doctorId, roleInDepartment, onDuty: true });
         await department.save();
+
         res.redirect('/hospital-panel/departments');
+
     } catch (error) {
-        res.redirect(`/hospital-panel/departments?error=${encodeURIComponent(error.message)}`);
+        res.redirect(`/hospital-panel/add-staff?error=${encodeURIComponent(error.message)}`);
     }
 };
 
