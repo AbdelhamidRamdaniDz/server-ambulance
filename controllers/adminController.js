@@ -1,49 +1,58 @@
 const Hospital = require('../models/Hospital');
 const Paramedic = require('../models/Paramedic');
 
-// @desc    إنشاء مستخدم جديد (مستشفى أو مسعف)
-// @route   POST /api/admin/users
-// @access  Private (super-admin)
 exports.createUser = async (req, res) => {
     try {
-        const { role, displayName, email, password, formattedAddress, nationalId, associatedAmbulance } = req.body;
+        const { role, displayName, email, password, formattedAddress, longitude, latitude, nationalId, associatedAmbulance } = req.body;
         
-        let user;
+        let newUser;
 
         if (role === 'hospital') {
-            // --- تم الإصلاح هنا ---
-            // إنشاء كائن مخصص لمطابقة حقول النموذج مع شيمة النموذج
+            if (!displayName || !email || !password || !longitude || !latitude) {
+                 return res.status(400).json({ success: false, message: 'يرجى إدخال جميع الحقول المطلوبة للمستشفى.' });
+            }
             const hospitalData = {
-                name: displayName, // مطابقة 'displayName' من النموذج مع حقل 'name'
-                email: email,
-                password: password,
-                formattedAddress: formattedAddress
+                name: displayName,
+                email,
+                password,
+                formattedAddress,
+                location: {
+                    type: 'Point',
+                    coordinates: [parseFloat(longitude), parseFloat(latitude)]
+                }
             };
-            user = await Hospital.create(hospitalData);
-
+            newUser = await Hospital.create(hospitalData);
         } else if (role === 'paramedic') {
-            const { displayName, ...rest } = req.body;
-            // هذا يطابق 'displayName' بشكل صحيح مع 'fullName' للمسعف
-            await Paramedic.create({ fullName: displayName, ...rest });
+             if (!displayName || !email || !password || !nationalId) {
+                 return res.status(400).json({ success: false, message: 'يرجى إدخال جميع الحقول المطلوبة للمسعف.' });
+            }
+            newUser = await Paramedic.create({ 
+                fullName: displayName, 
+                email, 
+                password, 
+                nationalId, 
+                associatedAmbulance 
+            });
         } else {
-            throw new Error('Invalid role specified');
+            return res.status(400).json({ success: false, message: 'الدور المحدد غير صالح.' });
         }
         
-        res.redirect('/admin/dashboard?success=true');
+        res.status(201).json({ success: true, message: `تم إنشاء حساب ${role} بنجاح.`, data: newUser });
 
     } catch (error) {
-        let errorMessage = error.message;
+        console.error("Error creating user:", error);
+        
         if (error.code === 11000) {
-            errorMessage = 'البريد الإلكتروني أو الرقم الوطني موجود بالفعل.';
+            return res.status(400).json({ 
+                success: false, 
+                message: 'فشل في الإنشاء. البريد الإلكتروني أو الرقم الوطني مسجل مسبقًا.' 
+            });
         }
-        const failedRole = req.body.role || 'paramedic';
-        res.redirect(`/admin/create-user-form?role=${failedRole}&error=${encodeURIComponent(errorMessage)}`);
+        
+        res.status(400).json({ success: false, message: error.message });
     }
 };
 
-// @desc    جلب جميع المستخدمين (المستشفيات والمسعفين)
-// @route   GET /api/admin/users
-// @access  Private (super-admin)
 exports.getUsers = async (req, res) => {
     try {
         const hospitals = await Hospital.find();

@@ -8,6 +8,8 @@ const connectDB = require('./config/db');
 dotenv.config();
 connectDB();
 
+
+
 // استيراد جميع المسارات
 const authRoutes = require('./routes/authRoutes');
 const adminApiRoutes = require('./routes/adminRoutes');
@@ -16,7 +18,8 @@ const patientApiRoutes = require('./routes/patientRoutes');
 const requestApiRoutes = require('./routes/requestRoutes');
 const adminViewRoutes = require('./routes/adminViewRoutes');
 const hospitalViewRoutes = require('./routes/hospitalViewRoutes');
-
+const paramedicRoutes = require('./routes/paramedicRoutes');
+const statusRoutes = require('./routes/statusRoutes');
 const app = express();
 
 // إعداد Middlewares
@@ -25,7 +28,10 @@ app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+  }));
 
 // --- 2. تفعيل method-override ---
 // هذا السطر يبحث عن `?_method=DELETE` في الرابط ويحول الطلب
@@ -38,9 +44,11 @@ app.use('/api/admin', adminApiRoutes);
 app.use('/api/hospitals', hospitalApiRoutes);
 app.use('/api/patients', patientApiRoutes);
 app.use('/api/requests', requestApiRoutes);
-app.use('/admin', adminViewRoutes);
-app.use('/hospital-panel', hospitalViewRoutes);
-
+// app.use('/admin', adminViewRoutes);
+// app.use('/hospital-panel', hospitalViewRoutes);
+app.use('/api/hospitals', hospitalApiRoutes);
+app.use('/api/paramedic', paramedicRoutes);
+app.use('/api/status', statusRoutes);
 // مسارات الواجهة الرئيسية
 app.get('/', (req, res) => res.redirect('/login'));
 app.get('/login', (req, res) => res.render('login'));

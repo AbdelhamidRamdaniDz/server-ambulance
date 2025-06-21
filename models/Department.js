@@ -28,7 +28,7 @@ const DepartmentSchema = new mongoose.Schema({
     required: [true, 'Please add a department name'],
     trim: true,
   },
-  description: { // <-- تمت إضافة الوصف
+  description: {
     type: String,
     maxlength: 500
   },
@@ -36,11 +36,21 @@ const DepartmentSchema = new mongoose.Schema({
     type: String,
     default: 'hospital-box-outline',
   },
+  color: {
+    type: String,
+    default: '#000000',
+    validate: {
+      validator: function(v) {
+        return /^#[0-9A-Fa-f]{6}$/.test(v);
+      },
+      message: props => `${props.value} ليس كود لون صالح (مثل #FF0000)`
+    }
+  },
   isAvailable: {
     type: Boolean,
     default: true
   },
-  beds: { // <-- تمت إضافة معلومات الأسرة
+  beds: {
     total: { type: Number, default: 0, min: 0 },
     occupied: { type: Number, default: 0, min: 0 }
   },
@@ -51,7 +61,6 @@ const DepartmentSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// الخصائص الافتراضية لحساب الأعداد تلقائيًا
 DepartmentSchema.virtual('activeStaffCount').get(function() {
   return this.staff.filter(member => member.onDuty).length;
 });

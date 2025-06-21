@@ -14,7 +14,7 @@ const PatientSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Doctor',
+    ref: 'Paramedic',
     required: true,
   },
   assignedHospital: { 

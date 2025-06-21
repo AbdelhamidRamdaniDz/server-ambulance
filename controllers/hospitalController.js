@@ -1,201 +1,454 @@
-const Department = require('../models/Department');
-const HospitalStatus = require('../models/HospitalStatus');
-const Patient = require('../models/Patient');
-const Doctor = require('../models/Doctor');
+const Department = require('../models/Department')
+const HospitalStatus = require('../models/HospitalStatus')
+const Patient = require('../models/Patient')
+const Doctor = require('../models/Doctor')
 
-// @desc    Create a new Doctor associated with the logged-in hospital
-// @route   POST /api/hospitals/doctors
 exports.createDoctor = async (req, res) => {
     try {
-        const { fullName, specialty, nationalCode, phone } = req.body;
-        
-        const doctorData = {
-            fullName,
-            specialty,
-            nationalCode,
-            phone,
-            hospital: req.user.id
-        };
-
-        await Doctor.create(doctorData);
-        
-        res.redirect('/hospital-panel/create-doctor?success=true');
-
+        const { fullName, specialty, nationalCode, phone } = req.body
+        const doctorData = { fullName, specialty, nationalCode, phone, hospital: req.user.id }
+        const doctor = await Doctor.create(doctorData)
+        res.status(201).json({ success: true, data: doctor })
     } catch (error) {
-        res.redirect(`/hospital-panel/create-doctor?error=${encodeURIComponent(error.message)}`);
+        if (error.code === 11000) {
+            return res.status(400).json({ success: false, message: 'فشل في الإضافة. الرقم الوطني الذي أدخلته مسجل مسبقًا.' })
+        }
+        res.status(400).json({ success: false, message: error.message })
     }
-};
+}
 
-// @desc    Get all departments for the logged-in hospital
-// @route   GET /api/hospitals/departments
+exports.getAllDoctors = async (req, res) => {
+    try {
+        const doctors = await Doctor.find({ hospital: req.user.id }).select('_id fullName specialty nationalCode phone email')
+        res.status(200).json({ success: true, data: doctors })
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'حدث خطأ أثناء جلب الأطباء' })
+    }
+}
+
 exports.getDepartments = async (req, res) => {
     try {
-        const departments = await Department.find({ hospital: req.user.id });
-        res.status(200).json({ success: true, data: departments });
+        const departments = await Department.find({ hospital: req.user.id })
+            .populate({
+                path: 'staff.doctor',
+                select: 'fullName'
+            })
+        res.status(200).json({ success: true, data: departments })
     } catch (error) {
-        res.status(500).json({ success: false, error: 'Server Error' });
+        res.status(500).json({ success: false, error: 'Server Error' })
     }
-};
+}
 
-// @desc    Create a new department
-// @route   POST /api/hospitals/departments
+exports.getDepartmentById = async (req, res) => {
+    try {
+        const department = await Department.findById(req.params.id)
+            .populate('staff.doctor', 'fullName phone email')
+        if (!department) {
+            return res.status(404).json({ success: false, message: 'القسم غير موجود' })
+        }
+        res.status(200).json({ success: true, data: department })
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'خطأ في الخادم' })
+    }
+}
+
 exports.createDepartment = async (req, res) => {
     try {
-        req.body.hospital = req.user.id;
-        await Department.create(req.body);
-        res.redirect('/hospital-panel/departments');
+        const { name, description, icon, color, isAvailable, beds } = req.body
+        const departmentData = {
+            hospital: req.user.id,
+            name,
+            description,
+            icon,
+            color,
+            isAvailable,
+            beds
+        }
+        const department = await Department.create(departmentData)
+        res.status(201).json({ success: true, data: department })
     } catch (error) {
-        res.redirect(`/hospital-panel/departments?error=${encodeURIComponent(error.message)}`);
+        res.status(400).json({ success: false, message: error.message })
     }
-};
+}
 
-// @desc    Update a specific department's details
-// @route   PUT /api/hospitals/departments/:id
 exports.updateDepartment = async (req, res) => {
     try {
-        const department = await Department.findById(req.params.id);
-
-        if (!department || department.hospital.toString() !== req.user.id) {
-            return res.status(404).send('Department not found or not authorized');
+        let department = await Department.findById(req.params.id)
+        if (!department) {
+            return res.status(404).json({ success: false, message: 'Department not found' })
         }
-
-        const { name, description, icon, isAvailable, beds, staff } = req.body;
-        
-        department.name = name || department.name;
-        department.description = description || department.description;
-        department.icon = icon || department.icon;
-        department.isAvailable = isAvailable === 'true';
-        if (beds) {
-            department.beds.total = beds.total || department.beds.total;
-            department.beds.occupied = beds.occupied || department.beds.occupied;
+        if (department.hospital.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'User not authorized' })
         }
-
-        if (staff && Array.isArray(staff)) {
-            staff.forEach(staffUpdate => {
-                const member = department.staff.id(staffUpdate.staffId);
-                if (member) {
-                    member.onDuty = staffUpdate.onDuty === 'true';
-                }
-            });
-        }
-        
-        await department.save();
-        res.redirect(`/hospital-panel/departments/${req.params.id}`);
-
+        department = await Department.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true
+        })
+        res.status(200).json({ success: true, data: department })
     } catch (error) {
-        res.redirect(`/hospital-panel/departments/${req.params.id}?error=${encodeURIComponent(error.message)}`);
+        res.status(500).json({ success: false, message: 'Server Error' })
     }
-};
+}
 
-
-// @desc    Add a doctor to a department's staff
-// @route   POST /api/hospitals/departments/:deptId/staff
 exports.addStaffToDepartment = async (req, res) => {
-    const { deptId } = req.params;
-    const { doctorId, roleInDepartment } = req.body;
-
     try {
-        const department = await Department.findById(deptId);
-
+        const department = await Department.findById(req.params.deptId)
         if (!department || department.hospital.toString() !== req.user.id) {
-            return res.status(404).json({ success: false, error: 'Department not found or not authorized' });
+            return res.status(404).json({ success: false, message: 'Department not found' })
         }
-        
-        const isAlreadyStaff = department.staff.some(member => member.doctor.toString() === doctorId);
-        if (isAlreadyStaff) {
-            const errorMessage = 'هذا الطبيب مضاف بالفعل إلى هذا القسم.';
-            return res.redirect(`/hospital-panel/add-staff?error=${encodeURIComponent(errorMessage)}`);
+        const { doctorId, roleInDepartment, onDuty } = req.body
+        if (department.staff.some(member => member.doctor.toString() === doctorId)) {
+            return res.status(400).json({ success: false, message: 'هذا الطبيب مضاف بالفعل إلى هذا القسم.' })
         }
-
-        if (roleInDepartment === 'رئيس قسم') {
-            const hasHeadOfDepartment = department.staff.some(member => member.roleInDepartment === 'رئيس قسم');
-            if (hasHeadOfDepartment) {
-                const errorMessage = 'لا يمكن تعيين أكثر من رئيس قسم واحد.';
-                return res.redirect(`/hospital-panel/add-staff?error=${encodeURIComponent(errorMessage)}`);
-            }
+        if (roleInDepartment === 'رئيس قسم' && department.staff.some(m => m.roleInDepartment === 'رئيس قسم')) {
+            return res.status(400).json({ success: false, message: 'لا يمكن تعيين أكثر من رئيس قسم واحد.' })
         }
-
-        department.staff.push({ doctor: doctorId, roleInDepartment, onDuty: true });
-        await department.save();
-
-        res.redirect('/hospital-panel/departments');
-
+        department.staff.push({ doctor: doctorId, roleInDepartment, onDuty: onDuty || false })
+        await department.save()
+        res.status(201).json({ success: true, data: department })
     } catch (error) {
-        res.redirect(`/hospital-panel/add-staff?error=${encodeURIComponent(error.message)}`);
+        res.status(400).json({ success: false, message: error.message })
     }
-};
+}
 
-// @desc    Update hospital status (beds, ER availability)
-// @route   PUT /api/hospitals/status
+exports.removeStaffFromDepartment = async (req, res) => {
+    try {
+        const department = await Department.findById(req.params.deptId)
+        if (!department || department.hospital.toString() !== req.user.id) {
+            return res.status(404).json({ success: false, message: 'Department not found' })
+        }
+        department.staff.pull({ _id: req.params.staffId })
+        await department.save()
+        res.status(200).json({ success: true, message: 'تم حذف الموظف بنجاح' })
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' })
+    }
+}
+
+exports.updateStaffMember = async (req, res) => {
+    try {
+        const department = await Department.findById(req.params.deptId)
+        if (!department || department.hospital.toString() !== req.user.id) {
+            return res.status(404).json({ success: false, message: 'Department not found' })
+        }
+        const staffMember = department.staff.id(req.params.staffId)
+        if (!staffMember) {
+            return res.status(404).json({ success: false, message: 'Staff member not found' })
+        }
+        const { roleInDepartment, onDuty } = req.body
+        if (roleInDepartment) staffMember.roleInDepartment = roleInDepartment
+        if (typeof onDuty === 'boolean') staffMember.onDuty = onDuty
+        await department.save()
+        res.status(200).json({ success: true, data: department })
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' })
+    }
+}
+
 exports.updateHospitalStatus = async (req, res) => {
     try {
-        const hospitalId = req.user.id;
-        let status = await HospitalStatus.findOne({ hospital: hospitalId });
-
+        const hospitalId = req.user.id
+        let status = await HospitalStatus.findOne({ hospital: hospitalId })
         if (!status) {
-            status = await HospitalStatus.create({ hospital: hospitalId, ...req.body });
+            status = await HospitalStatus.create({ hospital: hospitalId, ...req.body })
         } else {
-            status = await HospitalStatus.findByIdAndUpdate(status._id, req.body, {
-                new: true, runValidators: true
-            });
+            status = await HospitalStatus.findByIdAndUpdate(status._id, req.body, { new: true, runValidators: true })
         }
-        res.redirect('/hospital-panel/status');
+        res.status(200).json({ success: true, data: status })
     } catch (error) {
-         res.redirect(`/hospital-panel/status?error=${encodeURIComponent(error.message)}`);
+        res.status(500).json({ success: false, message: 'Server Error' })
     }
-};
+}
 
-// @desc    Get the patient log for the hospital
-// @route   GET /api/hospitals/patient-log
-// @access  Private (Hospital)
 exports.getPatientLog = async (req, res) => {
     try {
-        const patients = await Patient.find({ assignedHospital: req.user.id })
-            .populate('createdBy', 'firstName lastName');
-        res.status(200).json({ success: true, count: patients.length, data: patients });
+        const patients = await Patient.find({ assignedHospital: req.user.id }).populate('createdBy', 'fullName')
+        res.status(200).json({ success: true, count: patients.length, data: patients })
     } catch (error) {
-        res.status(500).json({ success: false, error: 'Server Error' });
+        res.status(500).json({ success: false, error: 'Server Error' })
     }
-};
+}
 
-
-// @desc    Remove a staff member from a department
-// @route   DELETE /api/hospitals/departments/:deptId/staff/:staffId
-exports.removeStaffFromDepartment = async (req, res) => {
+exports.getHospitalStatusesForParamedic = async (req, res) => {
     try {
-        const department = await Department.findById(req.params.deptId);
-
-        if (!department || department.hospital.toString() !== req.user.id) {
-            return res.status(404).send('Department not found or not authorized');
-        }
-
-        department.staff.pull({ _id: req.params.staffId });
-        
-        await department.save();
-
-        res.redirect(`/hospital-panel/departments/${req.params.deptId}`);
+        const statuses = await HospitalStatus.find().populate({
+            path: 'hospital',
+            select: 'name location'
+        })
+        res.status(200).json({ success: true, data: statuses })
     } catch (error) {
-        res.redirect(`/hospital-panel/departments/${req.params.deptId}?error=${encodeURIComponent(error.message)}`);
+        res.status(500).json({ success: false, error: 'Server Error' })
     }
-};
+}
 
-// @desc    Remove a staff member from a department
-// @route   DELETE /api/hospitals/departments/:deptId/staff/:staffId
-exports.removeStaffFromDepartment = async (req, res) => {
-    try {
-        const department = await Department.findById(req.params.deptId);
 
-        if (!department || department.hospital.toString() !== req.user.id) {
-            return res.status(404).send('Department not found or not authorized');
-        }
 
-        // إيجاد وحذف الموظف من مصفوفة الطاقم
-        department.staff.pull({ _id: req.params.staffId });
-        
-        await department.save();
+// const Department = require('../models/Department');
+// const HospitalStatus = require('../models/HospitalStatus');
+// const Patient = require('../models/Patient');
+// const Doctor = require('../models/Doctor');
 
-        res.redirect(`/hospital-panel/departments/${req.params.deptId}`);
-    } catch (error) {
-        res.redirect(`/hospital-panel/departments/${req.params.deptId}?error=${encodeURIComponent(error.message)}`);
-    }
-};
+// exports.createDoctor = async (req, res) => {
+//     try {
+//         const { fullName, specialty, nationalCode, phone } = req.body;
+//         const doctorData = {
+//             fullName,
+//             specialty,
+//             nationalCode,
+//             phone,
+//             hospital: req.user.id
+//         };
+//         const doctor = await Doctor.create(doctorData);
+//         res.status(201).json({ success: true, data: doctor });
+//     } catch (error) {
+//         console.error('Error creating doctor:', error);
+//         if (error.code === 11000) {
+//             return res.status(400).json({ success: false, message: 'فشل في الإضافة. الرقم الوطني الذي أدخلته مسجل مسبقًا.' });
+//         }
+//         res.status(400).json({ success: false, message: error.message });
+//     }
+// };
+
+// exports.createDepartment = async (req, res) => {
+//     try {
+//         const { name, description, icon, color, isAvailable, beds } = req.body;      
+//         const departmentData = {
+//             hospital: req.user.id,
+//             name,
+//             description,
+//             icon,
+//             color,
+//             isAvailable,
+//             beds
+//         };
+
+//         const department = await Department.create(departmentData);
+//         res.status(201).json({ success: true, data: department });
+
+//     } catch (error) {
+//         console.error('Error creating department:', error);
+//         res.status(400).json({ success: false, message: error.message });
+//     }
+// };
+
+// exports.updateDepartment = async (req, res) => {
+//     try {
+//         const department = await Department.findById(req.params.id);
+//         if (!department) {
+//             return res.status(404).json({ success: false, message: 'Department not found' });
+//         }
+//         if (department.hospital.toString() !== req.user.id) {
+//             return res.status(403).json({ success: false, message: 'User not authorized to update this department' });
+//         }
+//         const { name, icon, color, isAvailable } = req.body;
+//         if (name) department.name = name;
+//         if (icon) department.icon = icon;
+//         if (color) department.color = color;
+//         if (typeof isAvailable === 'boolean') {
+//             department.isAvailable = isAvailable;
+//         }
+//         const updatedDepartment = await department.save();
+//         res.status(200).json({
+//             success: true,
+//             data: updatedDepartment
+//         });
+//     } catch (error) {
+//         console.error('Error updating department:', error);
+//         res.status(500).json({ success: false, message: 'Server Error' });
+//     }
+// };
+
+// exports.addStaffToDepartment = async (req, res) => {
+//     const { deptId } = req.params;
+//     const { doctorId, roleInDepartment, onDuty } = req.body;
+//     try {
+//         const department = await Department.findById(deptId);
+//         if (!department || department.hospital.toString() !== req.user.id) {
+//             return res.status(404).json({ success: false, message: 'Department not found or not authorized' });
+//         }
+//         const isAlreadyStaff = department.staff.some(member => member.doctor.toString() === doctorId);
+//         if (isAlreadyStaff) {
+//             return res.status(400).json({ success: false, message: 'هذا الطبيب مضاف بالفعل إلى هذا القسم.' });
+//         }
+//         if (roleInDepartment === 'رئيس قسم') {
+//             const hasHeadOfDepartment = department.staff.some(member => member.roleInDepartment === 'رئيس قسم');
+//             if (hasHeadOfDepartment) {
+//                 return res.status(400).json({ success: false, message: 'لا يمكن تعيين أكثر من رئيس قسم واحد.' });
+//             }
+//         }
+//         department.staff.push({ doctor: doctorId, roleInDepartment, onDuty: onDuty || false });
+//         await department.save();
+//         res.status(201).json({
+//             success: true,
+//             data: department
+//         });
+//     } catch (error) {
+//         res.status(400).json({ success: false, message: error.message });
+//     }
+// };
+
+// exports.removeStaffFromDepartment = async (req, res) => {
+//     try {
+//         const department = await Department.findById(req.params.deptId);
+//         if (!department || department.hospital.toString() !== req.user.id) {
+//             return res.status(404).json({ success: false, message: 'Department not found or not authorized' });
+//         }
+//         department.staff.pull({ _id: req.params.staffId });
+//         await department.save();
+//         res.status(200).json({ success: true, message: 'تم حذف الموظف بنجاح' });
+//     } catch (error) {
+//         console.error('Error removing staff:', error);
+//         res.status(500).json({ success: false, message: 'خطأ في الخادم' });
+//     }
+// };
+
+// exports.updateStaffMember = async (req, res) => {
+//     try {
+//         const department = await Department.findById(req.params.deptId);
+//         if (!department || department.hospital.toString() !== req.user.id) {
+//             return res.status(404).json({ success: false, message: 'Department not found or not authorized' });
+//         }
+//         const staffMember = department.staff.id(req.params.staffId);
+//         if (!staffMember) {
+//             return res.status(404).json({ success: false, message: 'Staff member not found' });
+//         }
+//         const { roleInDepartment, onDuty } = req.body;
+//         if (roleInDepartment) {
+//             staffMember.roleInDepartment = roleInDepartment;
+//         }
+//         if (typeof onDuty === 'boolean') {
+//             staffMember.onDuty = onDuty;
+//         }
+//         await department.save();
+//         res.status(200).json({
+//             success: true,
+//             data: department
+//         });
+//     } catch (error) {
+//         console.error('Error updating staff member:', error);
+//         res.status(500).json({ success: false, message: 'خطأ في الخادم' });
+//     }
+// };
+
+// exports.getPatientLog = async (req, res) => {
+//     try {
+//         const patients = await Patient.find({ assignedHospital: req.user.id })
+//             .populate('createdBy', 'fullName');
+//         res.status(200).json({ success: true, count: patients.length, data: patients });
+//     } catch (error) {
+//         res.status(500).json({ success: false, error: 'Server Error' });
+//     }
+// };
+
+// exports.getHospitalStatusesForParamedic = async (req, res) => {
+//     try {
+//         const statuses = await HospitalStatus.find().populate({
+//             path: 'hospital',
+//             select: 'name location'
+//         });
+//         res.status(200).json({ success: true, data: statuses });
+//     } catch (error) {
+//         res.status(500).json({ success: false, error: 'Server Error' });
+//     }
+// };
+
+// exports.updateStaffMember = async (req, res) => {
+//     try {
+//         const department = await Department.findById(req.params.deptId);
+//         if (!department || department.hospital.toString() !== req.user.id) {
+//             return res.status(404).json({ success: false, message: 'Department not found or not authorized' });
+//         }
+//         const staffMember = department.staff.id(req.params.staffId);
+//         if (!staffMember) {
+//             return res.status(404).json({ success: false, message: 'Staff member not found' });
+//         }
+//         const { roleInDepartment, onDuty } = req.body;
+//         if (roleInDepartment) {
+//             staffMember.roleInDepartment = roleInDepartment;
+//         }
+//         if (typeof onDuty === 'boolean') {
+//             staffMember.onDuty = onDuty;
+//         }
+//         await department.save();
+//         res.status(200).json({
+//             success: true,
+//             data: department
+//         });
+//     } catch (error) {
+//         console.error('Error updating staff member:', error);
+//         res.status(500).json({ success: false, message: 'خطأ في الخادم' });
+//     }
+// };
+
+// exports.getDepartmentById = async (req, res) => {
+//     try {
+//         const department = await Department.findById(req.params.id)
+//             .populate('staff.doctor', 'fullName phone email');
+//         if (!department) {
+//             return res.status(404).json({ success: false, message: 'القسم غير موجود' });
+//         }
+//         res.status(200).json(department);
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ success: false, message: 'خطأ في الخادم' });
+//     }
+// };
+
+// exports.getAllDoctors = async (req, res) => {
+//     try {
+//         const doctors = await Doctor.find({ hospital: req.user.id })
+//             .select('_id fullName specialty nationalCode phone email');
+            
+//         res.status(200).json({ success: true, data: doctors });
+//     } catch (err) {
+//         console.error('Error fetching doctors:', err);
+//         res.status(500).json({ success: false, message: 'حدث خطأ أثناء جلب الأطباء' });
+//     }
+// };
+
+// exports.getDepartmentById = async (req, res) => {
+//     try {
+//         const department = await Department.findById(req.params.id)
+//             .populate('staff.doctor', 'fullName email phone');
+//         if (!department) {
+//             return res.status(404).json({ success: false, message: 'القسم غير موجود' });
+//         }
+//         res.status(200).json(department);
+//     } catch (err) {
+//         console.error('خطأ في جلب القسم:', err);
+//         res.status(500).json({ success: false, message: 'حدث خطأ أثناء جلب بيانات القسم' });
+//     }
+// };
+
+// exports.updateHospitalStatus = async (req, res) => {
+//     try {
+//         const hospitalId = req.user.id;
+//         let status = await HospitalStatus.findOne({ hospital: hospitalId });
+//         if (!status) {
+//             status = await HospitalStatus.create({ hospital: hospitalId, ...req.body });
+//         } else {
+//             status = await HospitalStatus.findByIdAndUpdate(status._id, req.body, {
+//                 new: true,
+//                 runValidators: true
+//             });
+//         }
+//         res.status(200).json({ success: true, data: status });
+//     } catch (error) {
+//         console.error('Error updating hospital status:', error);
+//         res.status(500).json({ success: false, message: 'Server Error' });
+//     }
+// };
+
+// exports.getDepartments = async (req, res) => {
+//     try {
+//         const departments = await Department.find({ hospital: req.user.id })
+//             .populate({
+//                 path: 'staff.doctor',
+//                 select: 'fullName'
+//             });
+//         res.status(200).json({ success: true, data: departments });
+//     } catch (error) {
+//         console.error("Error in getDepartments:", error);
+//         res.status(500).json({ success: false, error: 'Server Error' });
+//     }
+// };

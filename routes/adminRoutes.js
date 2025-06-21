@@ -7,7 +7,6 @@ const router = express.Router();
 // يمكنك تفعيل هذه الأسطر لاحقًا لحماية جميع المسارات
 // router.use(protect, authorize('super-admin'));
 
-// مسار موحد لإنشاء وعرض المستخدمين
 router.route('/users')
     .post(createUser)
     .get(getUsers);
