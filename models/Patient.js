@@ -23,7 +23,7 @@ const PatientSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['pending', 'confirmed', 'treated'], 
+    enum: ['pending', 'confirmed', 'treated', 'rejected'], 
     default: 'pending' 
   },
 }, { timestamps: true });

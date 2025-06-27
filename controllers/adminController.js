@@ -1,9 +1,6 @@
 const Hospital = require('../models/Hospital');
 const Paramedic = require('../models/Paramedic');
 
-// @desc    Create a new user (hospital or paramedic)
-// @route   POST /api/admin/users
-// @access  Private (super-admin)
 exports.createUser = async (req, res) => {
     try {
         const { role, displayName, email, password, formattedAddress, longitude, latitude, nationalId, associatedAmbulance } = req.body;
@@ -39,9 +36,7 @@ exports.createUser = async (req, res) => {
     }
 };
 
-// @desc    Get all users (hospitals and paramedics)
-// @route   GET /api/admin/users
-// @access  Private (super-admin)
+
 exports.getUsers = async (req, res) => {
     try {
         const hospitals = await Hospital.find();
@@ -52,9 +47,7 @@ exports.getUsers = async (req, res) => {
     }
 };
 
-// @desc    Delete a user (hospital or paramedic)
-// @route   DELETE /api/admin/users/:id
-// @access  Private (super-admin)
+
 exports.deleteUser = async (req, res) => {
     try {
         const { role } = req.body;
@@ -77,7 +70,7 @@ exports.deleteUser = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        await user.deleteOne(); // استخدام .deleteOne() في Mongoose v6+
+        await user.deleteOne();
 
         res.status(200).json({ success: true, message: 'User deleted successfully.' });
 

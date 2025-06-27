@@ -1,4 +1,3 @@
-
 const HospitalStatus = require('../models/HospitalStatus');
 
 exports.getAllHospitalStatuses = async (req, res) => {
